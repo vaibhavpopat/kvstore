@@ -4,29 +4,81 @@ import java.util.HashMap;
 import java.util.Map;
 public class KVStore {
     private final Map<String, String> data;
+    private boolean isTxnl;
+    private Transaction tx;
+
     public KVStore() {
         data = new HashMap<>();
     }
 
-    void add(String key, String value) {
-        data.put(key, value);
+    public void add(String key, String value) {
+        if(isTxnl) {
+            tx.add(key, value);
+        } else {
+            data.put(key, value);
+        }
     }
 
-    String get(String key) {
-        return data.get(key);
+    // TODO - Probably need to update this - to read in transaction details also (based on txn isolation levels)
+    public String get(String key) {
+        if(isTxnl) {
+            return tx.get(key);
+        } else {
+            return data.get(key);
+        }
     }
 
 
-    void remove(String key) {
-        data.remove(key);
+    public void remove(String key) {
+        if(isTxnl) {
+            tx.remove(key);
+        } else {
+            data.remove(key);
+        }
     }
 
-    void update(String key, String value) {
-        if(data.containsKey(key)) data.put(key, value);
+    public void update(String key, String value) {
+        if(isTxnl) {
+            tx.update(key, value);
+        } else {
+            if(data.containsKey(key)) data.put(key, value);
+        }
     }
 
-    boolean containsKey(String key) {
-        return data.containsKey(key);
+    public boolean containsKey(String key) {
+        if(isTxnl) {
+            return tx.containsKey(key);
+        } else {
+            return data.containsKey(key);
+        }
+    }
+
+    public void clear() {
+        if(isTxnl) {
+            cleanUpTx();
+        }
+        data.clear();
+    }
+
+    public void beginTx() {
+        tx = new Transaction();
+        tx.beginTx();
+        isTxnl = true;
+    }
+
+    public void commitTx() {
+        tx.commitTx(data);
+        cleanUpTx();
+    }
+
+    public void rollbackTx() {
+        tx.rollbackTx();
+        cleanUpTx();
+    }
+
+    private void cleanUpTx() {
+        tx = null;
+        isTxnl = false;
     }
 
 }
